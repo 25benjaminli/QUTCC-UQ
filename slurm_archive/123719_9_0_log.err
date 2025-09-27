@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/home/ty392/.conda/envs/qutcc/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/home/ty392/.conda/envs/qutcc/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/ty392/.local/lib/python3.9/site-packages/submitit/core/_submit.py", line 11, in <module>
+    submitit_main()
+  File "/home/ty392/.local/lib/python3.9/site-packages/submitit/core/submission.py", line 76, in submitit_main
+    process_job(args.folder)
+  File "/home/ty392/.local/lib/python3.9/site-packages/submitit/core/submission.py", line 48, in process_job
+    raise RuntimeError(
+RuntimeError: Waited for 60 seconds but could not find submitted jobs in path:
+/home/ty392/UQNet/QUTCC/slurm_archive/123719_9_submitted.pkl
+srun: error: monakhova-compute-01: task 0: Exited with exit code 1

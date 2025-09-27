@@ -1,0 +1,35 @@
+name: qutcc2
+channels:
+  - https://repo.anaconda.com/pkgs/main
+  - https://repo.anaconda.com/pkgs/r
+dependencies:
+  - h5py
+  - matplotlib
+  - python-memcached
+  - numpy
+  - packaging
+  - Pillow
+  - psutil
+  - PyYAML
+  - requests
+  - scipy
+  - scikit-image
+  - tqdm
+  - imageio
+  - pandas
+  - imagecodecs
+  - pyarrow
+  - seaborn
+  - pip
+  - pip:
+      - torch
+      - opencv-python
+      - ptflops
+      - lpips
+      - torchmetrics
+      - torchvision
+      - bsccm
+      - wandb
+      - deepinv
+      - kornia
+      - submitit
