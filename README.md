@@ -9,7 +9,7 @@ source activate qutcc
 ```
 
 ## Quickstart: 
-We've included weights checkpoints from Im2Im-Deep and QUTCC for all five imaging tasks in this repo. You can download them [here](PUT LINK HERE). Once downloaded, decompress the weights with the following command ```xz -d weights.tar.xz```and put them in the QUTCC_eval folder.
+We've included weights checkpoints from Im2Im-Deep and QUTCC for all five imaging tasks in this repo. You can download them [here](https://drive.google.com/file/d/1cX5_UDOYjb_cDIt1IBW7p0RHXuDbXO0m/view?usp=drive_link). Once downloaded, decompress the weights with the following command ```xz -d weights.tar.xz```and put them in the QUTCC_eval folder.
 
 Then go to the provided Jupyter notebook ```quickstart.ipynb``` in the main QUTCC directory and run all code cells. Be sure to select your experiment of interest. We have provided visualization and PDF figures. 
 
