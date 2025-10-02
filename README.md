@@ -6,6 +6,13 @@
 
 The official implementation of [QUTCC 🤗: Quantile Uncertainty Training and Conformal Calibration for Imaging Inverse Problems](https://arxiv.org/abs/2507.14760)
 
+<p align="center">
+  <img src="teaser.gif" alt="QUTCC Overview" width="1000"/>
+</p>
+<p align="left">
+  <em> During training, QUTCC uses a U-Net architecture with quantile embeddings to learn the full spectrum of quantiles simultaneously. This simultaneous quantile regression approach allows the model to more precisely capture the uncertainty inherent in the inverse problem, compared to previous methods. </em>
+</p>
+
 ## Setup: 
 Dependencies can be installed using
 ```
