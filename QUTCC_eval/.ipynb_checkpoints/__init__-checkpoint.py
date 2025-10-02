@@ -144,7 +144,6 @@ def plot_visualization(noisy, clean, im2im_model: nn.Module,
         mapped_img = (mapped_img * 255).astype(np.uint8)
         if save:
             iio.imwrite(f"plot_images/{index}_{title}_{exp_type}_zoom{zoom}.png", mapped_img)
-        print("img is shape = ", img.shape)
         im = ax.imshow(img[:, :, 0], cmap=cmap, vmax=vmax)
         ax.set_title(title, fontsize=10)
         ax.axis('off')
@@ -256,8 +255,8 @@ def create_broken_axis_pdf_plot(quantile_model, noisy_tensor, quantile_levels,
         fig: Matplotlib figure object
     """
     # Get quantile outputs
-    noisy = torch.tensor(noisy_tensor[:, :, 0], dtype=torch.float32)
-    noisy_tensor = noisy.unsqueeze(0).unsqueeze(0)
+    #noisy = torch.tensor(noisy_tensor[:, :, 0], dtype=torch.float32)
+    #noisy_tensor = noisy.unsqueeze(0).unsqueeze(0)
     conf_quantile_preds, conf_pdf_est = get_quantile_outputs(
         quantile_model, noisy_tensor, quantile_levels_conformal, device
     )
