@@ -44,9 +44,9 @@ def parse_arguments():
                                                                 "QPI", 
                                                                 "CT"], help='experiment type', required=True)
 
-    parser.add_argument('--net', type=str, default='QUTCC', choices=['QUTCC',
-                                                                             'Im2Im-Deep', 
-                                                                             'Im2Im'], )
+    parser.add_argument('--net', type=str, default='qutcc', choices=['qutcc',
+                                                                             'im2im-deep', 
+                                                                             'im2im'], )
     parser.add_argument('--imsize', type=int, default=256, help='image size')
     parser.add_argument('--in-channels', type=int, default=1, help='input channels')
     parser.add_argument('--out-channels', type=int, default=1, help='output channels')
@@ -236,15 +236,15 @@ def calculate_output_and_loss(model, net_type, noisy, clean, pinball_05, pinball
     denoised, loss = None, None
     # print(f"noisy shape: {noisy.shape}, clean shape: {clean.shape}")
 
-    if net_type in ['QUTCC']:
+    if net_type in ['qutcc']:
         curr_quantiles = torch.rand(batch_size, device=device, dtype=torch.float32)
         curr_quantiles[curr_quantiles == 0] = 1e-7
         pred = denoised = model(noisy, curr_quantiles)
         # print(f"noisy shape: {noisy.shape}, clean shape: {clean.shape}, curr_quantiles shape: {curr_quantiles.shape}, pred shape: {pred.shape}")
         loss = pinball(pred, clean, curr_quantiles)
 
-    elif net_type in ['Im2Im-Deep', 'Im2Im']:
-        if net_type == 'Im2Im-Deep':
+    elif net_type in ['im2im-deep', 'im2im']:
+        if net_type == 'im2im-deep':
             timevect = torch.full((batch_size,), 0.5, device=device, dtype=torch.float32)
             denoised = model(noisy, timevect)
         else:
@@ -314,17 +314,17 @@ def evaluate(model, test_loader, epoch, args, pinball_05, pinball_95, pinball, d
             pred = None
             denoised = None
 
-            if args.net in ['QUTCC']:
+            if args.net in ['qutcc']:
                 curr_quantile = torch.full((batch_size,), 0.5, device=device, dtype=torch.float32)
                 pred = denoised = model(noisy, curr_quantile)
                 loss = F.mse_loss(pred, clean, reduction='mean')
-            elif args.net == "Im2Im-Deep":
+            elif args.net == "im2im-deep":
                 timevect = torch.full((batch_size,), 0.5, device=device, dtype=torch.float32)
                 denoised = model(noisy, timevect)
                 pred = denoised[:,1:2, :, :]
                 loss = F.mse_loss(pred, clean, reduction='mean') \
                     + pinball_05(denoised[:,0:1, :, :], clean) + pinball_95(denoised[:,2:, :, :], clean)
-            elif args.net == 'Im2Im':
+            elif args.net == 'im2im':
                 denoised = model(noisy)
                 pred = denoised[:,1:2, :, :]
                 loss = F.mse_loss(pred, clean, reduction='mean') \

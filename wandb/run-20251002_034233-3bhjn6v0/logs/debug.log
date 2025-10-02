@@ -1,0 +1,26 @@
+2025-10-02 03:42:33,442 INFO    MainThread:3299481 [wandb_setup.py:_flush():79] Current SDK version is 0.18.7
+2025-10-02 03:42:33,442 INFO    MainThread:3299481 [wandb_setup.py:_flush():79] Configure stats pid to 3299481
+2025-10-02 03:42:33,442 INFO    MainThread:3299481 [wandb_setup.py:_flush():79] Loading settings from /home/ty392/.config/wandb/settings
+2025-10-02 03:42:33,442 INFO    MainThread:3299481 [wandb_setup.py:_flush():79] Loading settings from /home/ty392/UQNet/QUTCC-2/wandb/settings
+2025-10-02 03:42:33,442 INFO    MainThread:3299481 [wandb_setup.py:_flush():79] Loading settings from environment variables: {}
+2025-10-02 03:42:33,442 INFO    MainThread:3299481 [wandb_setup.py:_flush():79] Applying setup settings: {'mode': None, '_disable_service': None}
+2025-10-02 03:42:33,442 INFO    MainThread:3299481 [wandb_setup.py:_flush():79] Inferring run settings from compute environment: {'program_relpath': 'train.py', 'program_abspath': '/home/ty392/UQNet/QUTCC-2/train.py', 'program': '/home/ty392/UQNet/QUTCC-2/train.py'}
+2025-10-02 03:42:33,442 INFO    MainThread:3299481 [wandb_setup.py:_flush():79] Applying login settings: {}
+2025-10-02 03:42:33,442 INFO    MainThread:3299481 [wandb_init.py:_log_setup():533] Logging user logs to /home/ty392/UQNet/QUTCC-2/wandb/run-20251002_034233-3bhjn6v0/logs/debug.log
+2025-10-02 03:42:33,442 INFO    MainThread:3299481 [wandb_init.py:_log_setup():534] Logging internal logs to /home/ty392/UQNet/QUTCC-2/wandb/run-20251002_034233-3bhjn6v0/logs/debug-internal.log
+2025-10-02 03:42:33,442 INFO    MainThread:3299481 [wandb_init.py:init():619] calling init triggers
+2025-10-02 03:42:33,442 INFO    MainThread:3299481 [wandb_init.py:init():626] wandb.init called with sweep_config: {}
+config: {'exp_name': 'gaussian', 'exp_dir': None, 'data_root': '/share/monakhova/Cassandra_data/UQNet_proj/Denoising_FMD', 'experiment_type': 'Denoising', 'net': 'im2im-deep', 'imsize': 256, 'in_channels': 1, 'out_channels': 1, 'transform': 'center_crop', 'epochs': 20, 'batch_size': 16, 'lr': 0.0001, 'wd': 0.0, 'ckpt_freq': 5, 'print_freq': 100, 'log_freq': 1, 'plot_freq': 1000, 'resume': None, 'auto_resume': False, 'noise_type': 'gaussian', 'noise_levels_train': [1], 'noise_levels_test': [1], 'sigma': 0.5, 'ct_step_size': 800, 'wandb_project': None, 'wandb_entity': None, 'debug': False, 'seed': 42, 'cuda': 0, 'cmap': 'inferno', 'run_dir': 'None/gaussian/im2im-deep_epochs20_bs16_2025-10-02-03.42.32', 'ckpt_dir': 'None/gaussian/im2im-deep_epochs20_bs16_2025-10-02-03.42.32/checkpoints', 'train_dir': 'None/gaussian/im2im-deep_epochs20_bs16_2025-10-02-03.42.32/training', 'pred_dir': 'None/gaussian/im2im-deep_epochs20_bs16_2025-10-02-03.42.32/training/predictions', 'resume_checkpoint': None}
+2025-10-02 03:42:33,442 INFO    MainThread:3299481 [wandb_init.py:init():669] starting backend
+2025-10-02 03:42:33,442 INFO    MainThread:3299481 [wandb_init.py:init():673] sending inform_init request
+2025-10-02 03:42:33,446 INFO    MainThread:3299481 [backend.py:_multiprocessing_setup():104] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2025-10-02 03:42:33,446 INFO    MainThread:3299481 [wandb_init.py:init():686] backend started and connected
+2025-10-02 03:42:33,454 INFO    MainThread:3299481 [wandb_init.py:init():781] updated telemetry
+2025-10-02 03:42:33,499 INFO    MainThread:3299481 [wandb_init.py:init():814] communicating run to backend with 90.0 second timeout
+2025-10-02 03:42:33,844 INFO    MainThread:3299481 [wandb_init.py:init():867] starting run threads in backend
+2025-10-02 03:42:34,224 INFO    MainThread:3299481 [wandb_run.py:_console_start():2456] atexit reg
+2025-10-02 03:42:34,225 INFO    MainThread:3299481 [wandb_run.py:_redirect():2305] redirect: wrap_raw
+2025-10-02 03:42:34,225 INFO    MainThread:3299481 [wandb_run.py:_redirect():2370] Wrapping output streams.
+2025-10-02 03:42:34,225 INFO    MainThread:3299481 [wandb_run.py:_redirect():2395] Redirects installed.
+2025-10-02 03:42:34,230 INFO    MainThread:3299481 [wandb_init.py:init():911] run started, returning control to user process
+2025-10-02 03:42:34,264 WARNING MsgRouterThr:3299481 [router.py:message_loop():75] message_loop has been closed

@@ -1,0 +1,16 @@
+{"time":"2025-10-02T03:45:41.754177066-04:00","level":"INFO","msg":"using version","core version":"0.18.7"}
+{"time":"2025-10-02T03:45:41.754193146-04:00","level":"INFO","msg":"created symlink","path":"/home/ty392/UQNet/QUTCC-2/wandb/run-20251002_034541-6p0comre/logs/debug-core.log"}
+{"time":"2025-10-02T03:45:41.872079613-04:00","level":"INFO","msg":"created new stream","id":"6p0comre"}
+{"time":"2025-10-02T03:45:41.872122023-04:00","level":"INFO","msg":"stream: started","id":"6p0comre"}
+{"time":"2025-10-02T03:45:41.873637682-04:00","level":"INFO","msg":"handler: started","stream_id":"6p0comre"}
+{"time":"2025-10-02T03:45:41.873666412-04:00","level":"INFO","msg":"writer: Do: started","stream_id":"6p0comre"}
+{"time":"2025-10-02T03:45:41.874441586-04:00","level":"INFO","msg":"sender: started","stream_id":"6p0comre"}
+{"time":"2025-10-02T03:45:42.145124323-04:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-10-02T03:45:53.537827963-04:00","level":"INFO","msg":"stream: closing","id":"6p0comre"}
+{"time":"2025-10-02T03:45:53.537996934-04:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-10-02T03:45:53.538615707-04:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-10-02T03:45:54.074487472-04:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-10-02T03:45:54.233236496-04:00","level":"INFO","msg":"handler: closed","stream_id":"6p0comre"}
+{"time":"2025-10-02T03:45:54.233251886-04:00","level":"INFO","msg":"writer: Close: closed","stream_id":"6p0comre"}
+{"time":"2025-10-02T03:45:54.233419927-04:00","level":"INFO","msg":"sender: closed","stream_id":"6p0comre"}
+{"time":"2025-10-02T03:45:54.235195657-04:00","level":"INFO","msg":"stream: closed","id":"6p0comre"}
