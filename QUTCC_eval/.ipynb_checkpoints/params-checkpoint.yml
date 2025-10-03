@@ -8,28 +8,40 @@ Gaussian:
   quantile_weight_path: ./QUTCC_eval/weights/gaussian_quantile.pth
   clean_img: ./QUTCC_eval/imgs/denoise/gaussian_clean.png
   noisy_img: ./QUTCC_eval/imgs/denoise/gaussian_noisy.png
+  res_vmax: 0.2
+  unc_vmax: 0.5
+  pixel_coord: 9, 0
+  ylim: 0, 30
 
 Poisson:
   im2im_deep_lambda: 1.2312312126159668
   lower_q: 4.656612873177393e-10
   upper_q: 0.9999999995343387
   quantile_levels: [0.05, 0.1, 0.15, 0.2, 0.25, 0.5, 0.75, 0.8, 0.85, 0.9, 0.95]
-  quantile_levels_conformal: [4.656612873177393e-10, 0.051625427618026735, 0.11123916015625, 0.1781327734375, 0.248297705078125, 0.9135653710937501, 0.942959462890625, 0.975918017578125 0.9999891417026521, 0.9999999995343387]
+  quantile_levels_conformal: [4.656612873177393e-10, 0.051625427618026735, 0.11123916015625, 0.1781327734375, 0.248297705078125, 0.9135653710937501, 0.942959462890625, 0.975918017578125, 0.9999891417026521, 0.9999999995343387]
   im2im_weight_path: ./QUTCC_eval/weights/poisson_unet_im2im.pth
   quantile_weight_path: ./QUTCC_eval/weights/poisson_quantile.pth
   clean_img: ./QUTCC_eval/imgs/denoise/poisson_clean.png
   noisy_img: ./QUTCC_eval/imgs/denoise/poisson_noisy.png
+  res_vmax: 0.12
+  unc_vmax: 0.2
+  pixel_coord: 300, 200
+  ylim: 0, 250
   
 Real-Noise:
   im2im_deep_lambda: 1.1411410570144653
   lower_q: 0.2177734375
   upper_q: 0.9580078125
   quantile_levels: [0.05, 0.1, 0.15, 0.2, 0.25, 0.5, 0.75, 0.8, 0.85, 0.9, 0.95]
-  quantile_levels_conformal: 
+  quantile_levels_conformal: [0.2078203125, 0.29531921875, 0.36274987304687495, 0.42109848632812497, 0.47168339843749996, 0.8088304394531252,0.838273271484375 ,0.869669267578125,0.9059480761718751,0.9545314941406249]
   im2im_weight_path: ./QUTCC_eval/weights/realnoise_unet_im2im.pth
   quantile_weight_path: ./QUTCC_eval/weights/realnoise_quantile.pth
   clean_img: ./QUTCC_eval/imgs/denoise/real_clean.png
   noisy_img: ./QUTCC_eval/imgs/denoise/real_noisy.png
+  res_vmax: 0.18
+  unc_vmax: 0.24
+  pixel_coord: 300, 400
+  ylim: 0, 50
 
 MRI:
   im2im_deep_lambda: 1.0210210084915161
@@ -41,6 +53,10 @@ MRI:
   quantile_weight_path: ./QUTCC_eval/weights/mri_quantile.pth
   clean_img: ./QUTCC_eval/imgs/mri/clean.png
   noisy_img: ./QUTCC_eval/imgs/mri/noisy.png
+  res_vmax: 0.1
+  unc_vmax: 0.24
+  pixel_coord: 9, 0
+  ylim: 0, 10
 
 QPI:
   im2im_deep_lambda: 1.1811811923980713
@@ -53,4 +69,8 @@ QPI:
   clean_img: ./QUTCC_eval/imgs/qpi/clean.png
   noisy_img_1: ./QUTCC_eval/imgs/qpi/noisy1.png
   noisy_img_2: ./QUTCC_eval/imgs/qpi/noisy2.png
+  res_vmax: 0.04
+  unc_vmax: 0.11
+  pixel_coord: 9, 0
+  ylim: 0, 30
 

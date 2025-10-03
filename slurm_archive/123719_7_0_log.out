@@ -1,2 +1,0 @@
-submitit INFO (2025-09-24 01:21:32,214) - Starting with JobEnvironment(job_id=123719_7, hostname=monakhova-compute-01.cs.cornell.edu, local_rank=0(1), node=0(1), global_rank=0(1))
-submitit INFO (2025-09-24 01:21:32,214) - Loading pickle: /home/ty392/UQNet/QUTCC/slurm_archive/123719_7_submitted.pkl

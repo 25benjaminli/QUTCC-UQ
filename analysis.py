@@ -43,7 +43,8 @@ random.seed(0)
 np.random.seed(0)
 torch.manual_seed(0)
 
-ROOT = "/path/to/data/here"
+# ROOT = "/path/to/data/here"
+ROOT = "/share/monakhova/Cassandra_data/UQNet_proj"
 
 with open(Path(__file__).parent / "best_runs.json", "r") as f:
     BEST_RUNS = json.load(f)
@@ -59,7 +60,7 @@ def inject_root(d):
 inject_root(BEST_RUNS)
 
 print(BEST_RUNS)
-1/0
+
 
 def run(tasks: List[str] = None,
         calib_subset: int = 2000,
@@ -88,17 +89,18 @@ def run(tasks: List[str] = None,
         experiment_type = info['experiment_type']
         calib_results: List[Dict[str, Any]]
         try:
-            print(
-                f"For task {task}, found pre-selected lambda/lower_q/upper_q. Using precomputed calibration parameters."
-            )
             calib_results = [
                 {'net_type': 'im2im', 'lambda': info['im2im_lambda'], 'epoch': info['im2im_epoch']},
                 {'net_type': 'unet_im2im', 'lambda': info['unet_im2im_lambda'], 'epoch': info['unet_im2im_epoch']},
                 {'net_type': 'quantile', 'lower_q': info['quantile_lower_q'], 'upper_q': info['quantile_upper_q'], 'epoch': info['quantile_epoch']}
             ]
+
+            print(
+                f"For task {task}, found pre-selected lambda/lower_q/upper_q. Using precomputed calibration parameters."
+            )
         except KeyError:
             print(
-                f"Run failed because one of lambda/lower_q/upper_q was not included in BEST_RUNS for task {task}. Calibrating {task} from scratch."
+                f"Parameter loading failed because one of lambda/lower_q/upper_q was not included in BEST_RUNS for task {task}. Calibrating {task} from scratch."
             )
 
             if use_submitit:
@@ -460,7 +462,7 @@ def get_test_dataloader(experiment_type, info, net=Literal['im2im', 'quantile'],
 def calculate_statistics(
     task: str,
     seed: int = 1,
-    device: torch.device | None = None,
+    device: torch.device = None,
     test_subset: int = 2000,
     batch_size_multiplier: float = 0.7,
     show_progress: bool = True,

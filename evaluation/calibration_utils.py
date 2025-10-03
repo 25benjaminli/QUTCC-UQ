@@ -349,7 +349,7 @@ class AnalysisManager:
         self.intervals_subset = intervals_subset
         self.ignore_checkpoints = ignore_checkpoints
         self.pop_df = pop_df  # If True, will not return df in results
-        self.executor = create_local_executor(partition, timeout_min, logs_dir, job_name=f'{experiment_type}-analysis')
+        self.executor = create_local_executor(partition, logs_dir, timeout_min, job_name=f'{experiment_type}-analysis')
     
     def analyze_multiple(self, analysis_requests: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         results: List[Dict[str, Any]] = []

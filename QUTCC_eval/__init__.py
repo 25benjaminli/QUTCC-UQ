@@ -329,3 +329,60 @@ def create_broken_axis_pdf_plot(quantile_model, noisy_tensor, quantile_levels,
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     
     return fig
+
+def create_single_pixel_pdf_plot(quantile_model, noisy_tensor, quantile_levels, 
+                                quantile_levels_conformal, device,
+                                pixel_coord=(79, 412),
+                                xlim=None, ylim=(0, 80), figsize=(10, 6)):
+    """
+    Create a plot showing PDFs for a single pixel using both standard and conformal quantile levels.
+    
+    Args:
+        quantile_model: PyTorch model for quantile regression
+        noisy_tensor: Input tensor
+        quantile_levels: Standard quantile levels
+        quantile_levels_conformal: Conformal quantile levels
+        device: PyTorch device
+        pixel_coord: (row, col) tuple for pixel to plot
+        xlim: x-axis limits (optional)
+        ylim: y-axis limits
+        figsize: Figure size
+    
+    Returns:
+        fig: Matplotlib figure object
+    """
+    # Get quantile outputs for both methods
+    conf_quantile_preds, conf_pdf_est = get_quantile_outputs(
+        quantile_model, noisy_tensor, quantile_levels_conformal, device
+    )
+    quantile_preds, pdf_est = get_quantile_outputs(
+        quantile_model, noisy_tensor, quantile_levels, device
+    )
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # Extract sorted PDFs for specified pixel
+    pixel_row, pixel_col = pixel_coord
+    
+    s, p = extract_sorted_pdf(quantile_preds, pdf_est, pixel_row, pixel_col)
+    sc, pc = extract_sorted_pdf(conf_quantile_preds, conf_pdf_est, pixel_row, pixel_col)
+    
+    # Plot both PDFs
+    plot_pdf(ax, s, p, 'blue', f"Quantile ({pixel_row},{pixel_col})")
+    plot_pdf(ax, sc, pc, 'green', f"Conformal Quantile ({pixel_row},{pixel_col})")
+    
+    # Set limits
+    if xlim is not None:
+        ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+    
+    # Labels and legend
+    ax.set_ylabel("Density", fontsize=20)
+    ax.set_xlabel("Value", fontsize=20)
+    ax.legend(loc='upper right', fontsize=16)
+    ax.tick_params(axis='both', which='major', labelsize=18)
+    
+    plt.tight_layout()
+    
+    return fig

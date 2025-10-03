@@ -22,7 +22,9 @@ def create_model(net: str, device: str, in_channels: int = 1, out_channels: int 
     net_map = {
         'unet': (models.create_model2, {'num_measurements': in_channels, 'out_channels': out_channels}),
         'qutcc': (models.create_model2, {'num_measurements': in_channels, 'out_channels': out_channels}),
+        'unet_quantile': (models.create_model2, {'num_measurements': in_channels, 'out_channels': out_channels}),
         'unet_quantile10': (models.create_model3, {}),
+        'unet_im2im': (models.create_unet_im2im, {'num_measurements': in_channels, 'out_channels': out_channels, 'params': im2im_params, 'legacy': legacy}),
         'im2im-deep': (models.create_unet_im2im, {'num_measurements': in_channels, 'out_channels': out_channels, 'params': im2im_params, 'legacy': legacy}),
         'im2im': (models.create_im2im, {'image_size': model_config["image_size"], 'num_measurements': in_channels, 'params': im2im_params}),
         'unet_ensemble': (models.create_model2, {'num_measurements': in_channels, 'out_channels': out_channels}),
