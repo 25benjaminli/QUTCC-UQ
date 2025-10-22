@@ -1,8 +1,10 @@
 {
   "mri": {
     "experiment_type": "mri",
-    "unet_quantile_root": "unet_quantile_epochs50_bs12_2025-10-18-10.07.36",
-    "quantile_epoch": 5,
+    "qutcc_root": "qutcc_epochs50_bs12_2025-10-18-10.07.36",
+    "quantile_epoch": 10,
+    "im2im_deep_root": "im2im_deep_epochs50_bs12_2025-10-18-14.18.46",
+    "im2im_deep_epoch": 10,
     "calib_data_path": "DATAROOT/Fast_MRI/RAW_singlecoil_train/calibration",
     "test_data_path": "DATAROOT/Fast_MRI/RAW_singlecoil_train/validation",
     "in_channels": 1,

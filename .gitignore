@@ -6,3 +6,4 @@ experiments/
 __pycache__/
 slurm_archive/
 slurm*
+.ipynb_checkpoints/

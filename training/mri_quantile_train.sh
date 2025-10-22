@@ -9,7 +9,7 @@
 source training/setup.sh
 
 python -u train.py \
-    --net unet_quantile \
+    --net im2im_deep \
     --transform "center_crop" \
     --epochs 50 \
     --experiment-type "MRI" \

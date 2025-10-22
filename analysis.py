@@ -93,8 +93,8 @@ def run(tasks: List[str] = None,
         try:
             calib_results = [
                 {'net_type': 'im2im', 'lambda': info['im2im_lambda'], 'epoch': info['im2im_epoch']},
-                {'net_type': 'unet_im2im', 'lambda': info['unet_im2im_lambda'], 'epoch': info['unet_im2im_epoch']},
-                {'net_type': 'unet_quantile', 'lower_q': info['quantile_lower_q'], 'upper_q': info['quantile_upper_q'], 'epoch': info['quantile_epoch']}
+                {'net_type': 'im2im_deep', 'lambda': info['im2im_deep_lambda'], 'epoch': info['im2im_deep_epoch']},
+                {'net_type': 'qutcc', 'lower_q': info['quantile_lower_q'], 'upper_q': info['quantile_upper_q'], 'epoch': info['quantile_epoch']}
             ]
 
             print(
@@ -114,8 +114,8 @@ def run(tasks: List[str] = None,
                 )
                 requests = [
                     ("im2im", info['im2im_epoch']),
-                    ("unet_im2im", info['unet_im2im_epoch']),
-                    ("unet_quantile", info['quantile_epoch'])
+                    ("im2im_deep", info['im2im_deep_epoch']),
+                    ("qutcc", info['quantile_epoch'])
                 ]
                 calib_results = calibration_manager.calibrate_multiple(requests)
             else:
@@ -124,8 +124,8 @@ def run(tasks: List[str] = None,
                 _, lower_q, upper_q = calibrate_quantile(experiment_type, info, device, calib_subset)
                 calib_results = [
                     {'net_type': 'im2im', 'lambda': im2im_lambda, 'epoch': info['im2im_epoch']},
-                    {'net_type': 'unet_im2im', 'lambda': im2im_deep_lambda, 'epoch': info['unet_im2im_epoch']},
-                    {'net_type': 'unet_quantile', 'lower_q': lower_q, 'upper_q': upper_q, 'epoch': info['quantile_epoch']},
+                    {'net_type': 'im2im_deep', 'lambda': im2im_deep_lambda, 'epoch': info['im2im_deep_epoch']},
+                    {'net_type': 'qutcc', 'lower_q': lower_q, 'upper_q': upper_q, 'epoch': info['quantile_epoch']},
                 ]
 
         # calib_risk = get_calibration_risk(experiment_type, info, device, calib_subset)
@@ -139,7 +139,7 @@ def run(tasks: List[str] = None,
         risk_dict = {}
         for result in analysis_results:
             net_type = result['net_type']
-            model_key = "im2im_deep" if net_type == "unet_im2im" else net_type
+            model_key = "im2im_deep" if net_type == "im2im_deep" else net_type
 
             df = result['df']
             df['method'] = model_key
@@ -152,8 +152,8 @@ def run(tasks: List[str] = None,
         all_df.append(df_intervals_missed)
         
         stratified_results = compute_stratified_risk(df_intervals_missed)
-        # for method in ['im2im', 'im2im_deep', 'unet_quantile']:
-        for method in ['im2im_deep', 'unet_quantile']:
+        # for method in ['im2im', 'im2im_deep', 'qutcc']:
+        for method in ['im2im_deep', 'qutcc']:
             print(f"{method} Stratified Risk")
             print(json.dumps(_prepare_for_json(stratified_results[method]), indent=4))
             print(f"{method} Average Risk: {risk_dict[method]['mean_risk']:.4f}")
@@ -167,12 +167,12 @@ def run(tasks: List[str] = None,
             "mean_interval_length": {
                 "im2im": df_intervals_missed[df_intervals_missed["method"] == "im2im"]["interval"].mean(),
                 "im2im_deep": df_intervals_missed[df_intervals_missed["method"] == "im2im_deep"]["interval"].mean(),
-                "unet_quantile": df_intervals_missed[df_intervals_missed["method"] == "unet_quantile"]["interval"].mean(),
+                "qutcc": df_intervals_missed[df_intervals_missed["method"] == "qutcc"]["interval"].mean(),
             },
             "std_interval_length": {
                 "im2im": df_intervals_missed[df_intervals_missed["method"] == "im2im"]["interval"].std(),
                 "im2im_deep": df_intervals_missed[df_intervals_missed["method"] == "im2im_deep"]["interval"].std(),
-                "unet_quantile": df_intervals_missed[df_intervals_missed["method"] == "unet_quantile"]["interval"].std(),
+                "qutcc": df_intervals_missed[df_intervals_missed["method"] == "qutcc"]["interval"].std(),
             },
         }
 
@@ -263,18 +263,18 @@ def calibrate_im2im(experiment_type: str, info: Dict, device: torch.device,
 
 def calibrate_im2im_deep(experiment_type: str, info: Dict, device: torch.device, 
                          calib_subset: int = 2000, epoch=None) -> Tuple[nn.Module, float]:
-    epoch = epoch if epoch is not None else info["unet_im2im_epoch"]
-    im2im_deep_model, run_folder = load_checkpoint_for_inference(net="unet_im2im", in_channels=info["in_channels"],
-                                           experiment_type=experiment_type, run_folder_root=info["unet_im2im_root"],
+    epoch = epoch if epoch is not None else info["im2im_deep_epoch"]
+    im2im_deep_model, run_folder = load_checkpoint_for_inference(net="im2im_deep", in_channels=info["in_channels"],
+                                           experiment_type=experiment_type, run_folder_root=info["im2im_deep_root"],
                                            epoch=epoch, device=device, experiments_folder=info["experiments_folder"])
-    calib_dataloader = get_calib_dataloader(experiment_type, info, net="unet_im2im", 
+    calib_dataloader = get_calib_dataloader(experiment_type, info, net="im2im_deep", 
                                             batch_size_multiplier=1.5, calib_subset=calib_subset)
 
     analysis_dir = Path(run_folder) / "analysis"
     analysis_dir.mkdir(parents=True, exist_ok=True)
 
     alpha, min_l, max_l, num_l = 0.1, 0, 2, 300
-    im2im_deep_lambda_file = analysis_dir / f"unet_im2im_epoch{epoch}_lambda.pt"
+    im2im_deep_lambda_file = analysis_dir / f"im2im_deep_epoch{epoch}_lambda.pt"
     im2im_deep_lambda = manage_checkpoint(im2im_deep_lambda_file, compute_optimal_lambdas,
                                           dataloader=calib_dataloader, model=im2im_deep_model, alpha=alpha,
                                           min_lam=min_l, max_lam=max_l, num_lam=num_l, device=device)
@@ -284,11 +284,11 @@ def calibrate_im2im_deep(experiment_type: str, info: Dict, device: torch.device,
 def calibrate_quantile(experiment_type: str, info: Dict, device: torch.device, 
                        calib_subset: int = 2000, epoch=None) -> Tuple[nn.Module, float, float]:
     epoch = epoch if epoch is not None else info["quantile_epoch"]
-    quantile_model, run_folder = load_checkpoint_for_inference(net="unet_quantile", in_channels=info["in_channels"],
+    quantile_model, run_folder = load_checkpoint_for_inference(net="qutcc", in_channels=info["in_channels"],
                                         experiment_type=experiment_type, run_folder_root=info["quantile_root"],
                                         epoch=epoch, device=device, 
                                         experiments_folder=info["experiments_folder"])
-    calib_dataloader = get_calib_dataloader(experiment_type, info, net="unet_quantile", calib_subset=calib_subset)
+    calib_dataloader = get_calib_dataloader(experiment_type, info, net="qutcc", calib_subset=calib_subset)
 
     analysis_dir = Path(run_folder) / "analysis"
     analysis_dir.mkdir(parents=True, exist_ok=True)
@@ -309,7 +309,7 @@ def calibrate_quantile(experiment_type: str, info: Dict, device: torch.device,
 def compute_stratified_risk(df_intervals_missed: pd.DataFrame) -> Dict[str, Dict[str, float]]:
     stratified_results = {}
 
-    for method in ["im2im", "im2im_deep", "unet_quantile"]:
+    for method in ["im2im", "im2im_deep", "qutcc"]:
         method_df = df_intervals_missed[df_intervals_missed["method"] == method][["interval", "missed"]]
         stratified_results[method] = size_stratified_risk(method_df)
 
@@ -318,12 +318,12 @@ def compute_stratified_risk(df_intervals_missed: pd.DataFrame) -> Dict[str, Dict
 def create_stratified_risk_plot(all_stratified: Dict[str, Dict[str, Dict[str, float]]], save_dir: Path):
     categories  = ["Short", "Short-Medium", "Medium-Long", "Long"]
     experiments = list(all_stratified.keys())
-    methods     = ["im2im_deep", "unet_quantile"]
+    methods     = ["im2im_deep", "qutcc"]
 
     xtick_labels = []
     for exp in experiments:
         xtick_labels.extend([
-            f"{exp}\nIm2Im-Deep",
+            f"{exp}\nim2im_deep",
             f"{exp}\nQUTCC"
         ])
 
@@ -339,11 +339,11 @@ def create_stratified_risk_plot(all_stratified: Dict[str, Dict[str, Dict[str, fl
 
     colors_im2im_deep = ['#e6e6ff', '#bfbfff', '#9999ff', '#7373ff']
     colors_quantile = ["#ffe6e6", '#ffbfbf', '#ff9999', '#ff7373']
-    palette_map = {"im2im_deep": colors_im2im_deep, "unet_quantile": colors_quantile}
+    palette_map = {"im2im_deep": colors_im2im_deep, "qutcc": colors_quantile}
     for i, cat in enumerate(categories):
         bar_colors = []
         for lbl in xtick_labels:
-            method = "im2im_deep" if "Deep" in lbl else "unet_quantile"
+            method = "im2im_deep" if "Deep" in lbl else "qutcc"
             bar_colors.append(palette_map[method][i])
         ax.bar(x + (i - 1.5) * bar_width,   
             data[cat],
@@ -382,10 +382,10 @@ def create_stratified_risk_plot(all_stratified: Dict[str, Dict[str, Dict[str, fl
 
 def create_violin_plot(all_df: pd.DataFrame, summary: Dict[str, Dict], save_dir: Path):
     df_violin = all_df[(all_df["method"] == "im2im_deep") | 
-                    (all_df["method"] == "unet_quantile")][["experiment", "method", "interval"]]
-    method_order = ["im2im_deep", "unet_quantile"]
-    method_labels = {"im2im_deep": "Im2Im-Deep", "unet_quantile": "QUTCC"}
-    palette = {'im2im_deep': '#7373ff', 'unet_quantile': '#ff7373'}
+                    (all_df["method"] == "qutcc")][["experiment", "method", "interval"]]
+    method_order = ["im2im_deep", "qutcc"]
+    method_labels = {"im2im_deep": "im2im_deep", "qutcc": "QUTCC"}
+    palette = {'im2im_deep': '#7373ff', 'qutcc': '#ff7373'}
 
     multiplier = 2.5
     fig, ax = plt.subplots(figsize=(5.52 * multiplier, 2.5 * multiplier))
@@ -409,8 +409,8 @@ def create_violin_plot(all_df: pd.DataFrame, summary: Dict[str, Dict], save_dir:
     ax.set_ylim(0, 0.35)
 
     legend_elements = [
-        Patch(facecolor=palette['im2im_deep'], label='Im2Im-Deep'), 
-        Patch(facecolor=palette['unet_quantile'], label='QUTCC')
+        Patch(facecolor=palette['im2im_deep'], label='im2im_deep'), 
+        Patch(facecolor=palette['qutcc'], label='QUTCC')
     ]
     ax.legend(handles=legend_elements, fontsize=8 * multiplier, loc='upper right', bbox_to_anchor=(1.2, 1.2))
 
@@ -423,7 +423,7 @@ def create_violin_plot(all_df: pd.DataFrame, summary: Dict[str, Dict], save_dir:
     fig.savefig(violin_plot_path, dpi=300, bbox_inches="tight")
     print("Saved split violin plot to:", violin_plot_path)
 
-def get_test_dataloader(experiment_type, info, net=Literal['im2im', 'unet_quantile'], batch_size_multiplier=0.5, test_subset=200):
+def get_test_dataloader(experiment_type, info, net=Literal['im2im', 'qutcc'], batch_size_multiplier=0.5, test_subset=200):
     if experiment_type == "mri":
         mask_info = {'type': 'equispaced', 'center_fraction' : [0.08], 'acceleration' : [4]}
         test_dataset = FastMRIDataset(info["test_data_path"], normalize_input='standard', normalize_output='min-max', 
@@ -475,7 +475,7 @@ def calculate_statistics(
 
     Returns:
         results (dict): Nested dict with mean/std for MSE, SSIM, PSNR, LPIPS
-                        for im2im, QUTCC (unet_quantile), and im2im_deep.
+                        for im2im, QUTCC (qutcc), and im2im_deep.
         (optionally) raw (dict of tensors): Per-sample metric tensors if return_raw=True.
     """
     # ── Setup ──────────────────────────────────────────────────────────────────────
@@ -496,7 +496,7 @@ def calculate_statistics(
     )
 
     quant_model, _ = load_checkpoint_for_inference(
-        net="unet_quantile",
+        net="qutcc",
         in_channels=BEST_RUNS[task]["in_channels"],
         experiment_type=BEST_RUNS[task]["experiment_type"],
         run_folder_root=BEST_RUNS[task]["quantile_root"],
@@ -504,18 +504,18 @@ def calculate_statistics(
         device=device,
     )
 
-    unet_im2im_model, _ = load_checkpoint_for_inference(
-        net="unet_im2im",
+    im2im_deep_model, _ = load_checkpoint_for_inference(
+        net="im2im_deep",
         in_channels=BEST_RUNS[task]["in_channels"],
         experiment_type=BEST_RUNS[task]["experiment_type"],
-        run_folder_root=BEST_RUNS[task]["unet_im2im_root"],
-        epoch=BEST_RUNS[task]["unet_im2im_epoch"],
+        run_folder_root=BEST_RUNS[task]["im2im_deep_root"],
+        epoch=BEST_RUNS[task]["im2im_deep_epoch"],
         device=device,
     )
 
     # ── Dataloader & metrics ──────────────────────────────────────────────────────
     dataloader = get_test_dataloader(
-        task, BEST_RUNS[task], net="unet_quantile",
+        task, BEST_RUNS[task], net="qutcc",
         batch_size_multiplier=batch_size_multiplier,
         test_subset=test_subset,
     )
@@ -527,7 +527,7 @@ def calculate_statistics(
 
     im2im_mse_acc, im2im_ssim_acc, im2im_psnr_acc, im2im_lpips_acc = [], [], [], []
     quantile_mse_acc, quantile_ssim_acc, quantile_psnr_acc, quantile_lpips_acc = [], [], [], []
-    unet_im2im_mse_acc, unet_im2im_ssim_acc, unet_im2im_psnr_acc, unet_im2im_lpips_acc = [], [], [], []
+    im2im_deep_mse_acc, im2im_deep_ssim_acc, im2im_deep_psnr_acc, im2im_deep_lpips_acc = [], [], [], []
 
     iterator = tqdm(dataloader) if show_progress else dataloader
 
@@ -553,7 +553,7 @@ def calculate_statistics(
             clean_in  = (im2im_clean.clamp(0,1) * 2.0 - 1.0).expand(-1, 3, -1, -1)
             im2im_lpips_acc.append(lpips_metric(im2im_in, clean_in))
 
-            # unet_quantile (QUTCC @ q=0.5)
+            # qutcc (QUTCC @ q=0.5)
             q_prediction = torch.tensor([0.5], device=device, dtype=torch.float32)
             quantile_output = quant_model(noisy.to(device), q_prediction)
             quantile_clean = clean
@@ -569,24 +569,24 @@ def calculate_statistics(
 
             # U-Net Im2Im (im2im_deep)
             timevect = torch.full((noisy.shape[0],), 0.5, device=device, dtype=torch.float32)
-            unet_im2im_output = unet_im2im_model(noisy.to(device), timevect)
-            unet_im2im_output = torch.unsqueeze(unet_im2im_output[:, 1, :, :], 1)
-            unet_im2im_clean = clean
+            im2im_deep_output = im2im_deep_model(noisy.to(device), timevect)
+            im2im_deep_output = torch.unsqueeze(im2im_deep_output[:, 1, :, :], 1)
+            im2im_deep_clean = clean
 
-            out = batch_mse(unet_im2im_clean, unet_im2im_output).view(unet_im2im_output.size(0), -1).mean(dim=1)
-            unet_im2im_mse_acc.append(out)
-            unet_im2im_ssim_acc.append(ssim_metric(unet_im2im_output, unet_im2im_clean).view(unet_im2im_output.size(0), -1).mean(dim=1))
-            unet_im2im_psnr_acc.append(psnr_metric(unet_im2im_output, unet_im2im_clean).view(unet_im2im_output.size(0), -1).mean(dim=1))
+            out = batch_mse(im2im_deep_clean, im2im_deep_output).view(im2im_deep_output.size(0), -1).mean(dim=1)
+            im2im_deep_mse_acc.append(out)
+            im2im_deep_ssim_acc.append(ssim_metric(im2im_deep_output, im2im_deep_clean).view(im2im_deep_output.size(0), -1).mean(dim=1))
+            im2im_deep_psnr_acc.append(psnr_metric(im2im_deep_output, im2im_deep_clean).view(im2im_deep_output.size(0), -1).mean(dim=1))
 
-            ui_out  = (unet_im2im_output.clamp(0,1) * 2.0 - 1.0).expand(-1, 3, -1, -1)
-            ui_clean = (unet_im2im_clean.clamp(0,1) * 2.0 - 1.0).expand(-1, 3, -1, -1)
-            unet_im2im_lpips_acc.append(lpips_metric(ui_out, ui_clean))
+            ui_out  = (im2im_deep_output.clamp(0,1) * 2.0 - 1.0).expand(-1, 3, -1, -1)
+            ui_clean = (im2im_deep_clean.clamp(0,1) * 2.0 - 1.0).expand(-1, 3, -1, -1)
+            im2im_deep_lpips_acc.append(lpips_metric(ui_out, ui_clean))
 
     # ── Concatenate and summarize ─────────────────────────────────────────────────
     def _cat(x): return torch.cat(x, dim=0)
     im2im_mse_acc, im2im_ssim_acc, im2im_psnr_acc, im2im_lpips_acc = map(_cat, [im2im_mse_acc, im2im_ssim_acc, im2im_psnr_acc, im2im_lpips_acc])
     quantile_mse_acc, quantile_ssim_acc, quantile_psnr_acc, quantile_lpips_acc = map(_cat, [quantile_mse_acc, quantile_ssim_acc, quantile_psnr_acc, quantile_lpips_acc])
-    unet_im2im_mse_acc, unet_im2im_ssim_acc, unet_im2im_psnr_acc, unet_im2im_lpips_acc = map(_cat, [unet_im2im_mse_acc, unet_im2im_ssim_acc, unet_im2im_psnr_acc, unet_im2im_lpips_acc])
+    im2im_deep_mse_acc, im2im_deep_ssim_acc, im2im_deep_psnr_acc, im2im_deep_lpips_acc = map(_cat, [im2im_deep_mse_acc, im2im_deep_ssim_acc, im2im_deep_psnr_acc, im2im_deep_lpips_acc])
 
     print(f"im2im_uq MSE: {im2im_mse_acc.mean().item():.7f} +/- {im2im_mse_acc.std().item():.7f}")
     print(f"im2im_uq SSIM: {im2im_ssim_acc.mean().item():.3f} +/- {im2im_ssim_acc.std().item():.3f}")
@@ -598,10 +598,10 @@ def calculate_statistics(
     print(f"QUTCC PSNR: {quantile_psnr_acc.mean().item():.3f} +/- {quantile_psnr_acc.std().item():.3f}")
     print(f"QUTCC LPIPS: {quantile_lpips_acc.mean().item():.3f} +/- {quantile_lpips_acc.std().item():.3f}")
 
-    print(f"im2im_deep MSE: {unet_im2im_mse_acc.mean().item():.7f} +/- {unet_im2im_mse_acc.std().item():.7f}")
-    print(f"im2im_deep SSIM: {unet_im2im_ssim_acc.mean().item():.3f} +/- {unet_im2im_ssim_acc.std().item():.3f}")
-    print(f"im2im_deep PSNR: {unet_im2im_psnr_acc.mean().item():.3f} +/- {unet_im2im_psnr_acc.std().item():.3f}")
-    print(f"im2im_deep LPIPS: {unet_im2im_lpips_acc.mean().item():.3f} +/- {unet_im2im_lpips_acc.std().item():.3f}")
+    print(f"im2im_deep MSE: {im2im_deep_mse_acc.mean().item():.7f} +/- {im2im_deep_mse_acc.std().item():.7f}")
+    print(f"im2im_deep SSIM: {im2im_deep_ssim_acc.mean().item():.3f} +/- {im2im_deep_ssim_acc.std().item():.3f}")
+    print(f"im2im_deep PSNR: {im2im_deep_psnr_acc.mean().item():.3f} +/- {im2im_deep_psnr_acc.std().item():.3f}")
+    print(f"im2im_deep LPIPS: {im2im_deep_lpips_acc.mean().item():.3f} +/- {im2im_deep_lpips_acc.std().item():.3f}")
 
     results = {
         "im2im": {
@@ -617,10 +617,10 @@ def calculate_statistics(
             "LPIPS": {"mean": quantile_lpips_acc.mean().item(), "std": quantile_lpips_acc.std().item()},
         },
         "im2im_deep": {
-            "MSE":   {"mean": unet_im2im_mse_acc.mean().item(),   "std": unet_im2im_mse_acc.std().item()},
-            "SSIM":  {"mean": unet_im2im_ssim_acc.mean().item(),  "std": unet_im2im_ssim_acc.std().item()},
-            "PSNR":  {"mean": unet_im2im_psnr_acc.mean().item(),  "std": unet_im2im_psnr_acc.std().item()},
-            "LPIPS": {"mean": unet_im2im_lpips_acc.mean().item(), "std": unet_im2im_lpips_acc.std().item()},
+            "MSE":   {"mean": im2im_deep_mse_acc.mean().item(),   "std": im2im_deep_mse_acc.std().item()},
+            "SSIM":  {"mean": im2im_deep_ssim_acc.mean().item(),  "std": im2im_deep_ssim_acc.std().item()},
+            "PSNR":  {"mean": im2im_deep_psnr_acc.mean().item(),  "std": im2im_deep_psnr_acc.std().item()},
+            "LPIPS": {"mean": im2im_deep_lpips_acc.mean().item(), "std": im2im_deep_lpips_acc.std().item()},
         },
     }
 
@@ -628,7 +628,7 @@ def calculate_statistics(
         raw = {
             "im2im":        {"MSE": im2im_mse_acc, "SSIM": im2im_ssim_acc, "PSNR": im2im_psnr_acc, "LPIPS": im2im_lpips_acc},
             "QUTCC":        {"MSE": quantile_mse_acc, "SSIM": quantile_ssim_acc, "PSNR": quantile_psnr_acc, "LPIPS": quantile_lpips_acc},
-            "im2im_deep":   {"MSE": unet_im2im_mse_acc, "SSIM": unet_im2im_ssim_acc, "PSNR": unet_im2im_psnr_acc, "LPIPS": unet_im2im_lpips_acc},
+            "im2im_deep":   {"MSE": im2im_deep_mse_acc, "SSIM": im2im_deep_ssim_acc, "PSNR": im2im_deep_psnr_acc, "LPIPS": im2im_deep_lpips_acc},
         }
         return results, raw
 
@@ -638,14 +638,14 @@ def check_crossings(experiment_type: str, info: Dict, device: torch.device,
                     calib_subset: int = 2000) -> Tuple[int, int]:
     epoch = info["quantile_epoch"]
     quantile_model, run_folder = load_checkpoint_for_inference(
-        net="unet_quantile", in_channels=info["in_channels"],
+        net="qutcc", in_channels=info["in_channels"],
         experiment_type=experiment_type, run_folder_root=info["quantile_root"],
         epoch=epoch, device=device, experiments_folder=info["experiments_folder"])
     
     analysis_dir = run_folder / "analysis"
     analysis_dir.mkdir(parents=True, exist_ok=True)
 
-    crossings_dataloader = get_calib_dataloader(experiment_type, info, net="unet_quantile",
+    crossings_dataloader = get_calib_dataloader(experiment_type, info, net="qutcc",
                                                  batch_size_multiplier=0.1, calib_subset=calib_subset)
     quantiles = torch.arange(0.1, 1.0, 0.1).to(device)
     crossings_file = analysis_dir / "quantile_crossings.json"

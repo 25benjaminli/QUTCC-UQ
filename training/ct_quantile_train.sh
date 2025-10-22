@@ -8,7 +8,7 @@
 
 source training/setup.sh
 python -u train.py \
-    --net unet_quantile \
+    --net qutcc \
     --epochs 50 \
     --experiment-type "CT" \
     --ct-step-size 800 \

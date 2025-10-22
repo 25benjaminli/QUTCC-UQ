@@ -158,7 +158,7 @@ def get_risk(dataloader: DataLoader, im2im_model: ModelWithUncertainty, im2im_la
     
     return totals                             
         
-def get_test_intervals_missed(net_type: Literal["im2im", "unet_im2im", "unet_quantile"],
+def get_test_intervals_missed(net_type: Literal["im2im", "im2im_deep", "qutcc"],
                               test_dataloader: DataLoader, model: nn.Module,
                               lambda_or_lower_q: float, upper_q: Optional[float] = None,
                               device: torch.device = torch.device("cuda")) -> Tuple[pd.DataFrame, Dict[str, float]]:
@@ -178,12 +178,12 @@ def get_test_intervals_missed(net_type: Literal["im2im", "unet_im2im", "unet_qua
                 assert isinstance(model.baseModel, Im2Im)
                 pred = model(noisy)
                 lower, upper = return_calibrated_bounds(pred, lambda_or_lower_q)
-            elif net_type == "unet_im2im":
+            elif net_type == "im2im_deep":
                 assert isinstance(model.baseModel, UNetModel)
                 timevect = torch.full((B,), 0.5, device=device, dtype=torch.float32)
                 pred = model(noisy, timevect)
                 lower, upper = return_calibrated_bounds(pred, lambda_or_lower_q)
-            elif net_type == "unet_quantile":
+            elif net_type == "qutcc":
                 lower_q = lambda_or_lower_q
                 assert upper_q is not None, "Upper quantile must be provided for quantile model"
                 quantiles = torch.tensor([lower_q, upper_q], device=device, dtype=torch.float32)
@@ -203,7 +203,7 @@ def get_test_intervals_missed(net_type: Literal["im2im", "unet_im2im", "unet_qua
             total["n"]      += num_pixels
 
             rows.append(pd.DataFrame({
-                "method":   "im2im_deep" if net_type == "unet_im2im" else net_type,
+                "method":   "im2im_deep" if net_type == "im2im_deep" else net_type,
                 "interval": interval_size.cpu().numpy().astype('float32'),
                 "missed":   missed_bin.view(-1).cpu().numpy().astype('bool'),
             }))

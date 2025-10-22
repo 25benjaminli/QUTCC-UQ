@@ -9,7 +9,7 @@
 source training/setup.sh
 
 python -u train.py \
-    --net unet_quantile \
+    --net qutcc \
     --transform "center_crop" \
     --epochs 100 \
     --experiment-type "Denoising" \

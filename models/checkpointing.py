@@ -20,12 +20,9 @@ def create_model(net: str, device: str, in_channels: int = 1, out_channels: int 
     }
     
     net_map = {
-        'unet': (models.create_model2, {'num_measurements': in_channels, 'out_channels': out_channels}),
         'qutcc': (models.create_model2, {'num_measurements': in_channels, 'out_channels': out_channels}),
-        'unet_quantile': (models.create_model2, {'num_measurements': in_channels, 'out_channels': out_channels}),
-        'unet_quantile10': (models.create_model3, {}),
-        'unet_im2im': (models.create_unet_im2im, {'num_measurements': in_channels, 'out_channels': out_channels, 'params': im2im_params, 'legacy': legacy}),
-        'im2im-deep': (models.create_unet_im2im, {'num_measurements': in_channels, 'out_channels': out_channels, 'params': im2im_params, 'legacy': legacy}),
+        'qutcc10': (models.create_model2, {'in_channels': 10, 'out_channels': 1}),
+        'im2im_deep': (models.create_im2im_deep, {'num_measurements': in_channels, 'out_channels': out_channels, 'params': im2im_params, 'legacy': legacy}),
         'im2im': (models.create_im2im, {'image_size': model_config["image_size"], 'num_measurements': in_channels, 'params': im2im_params}),
         'unet_ensemble': (models.create_model2, {'num_measurements': in_channels, 'out_channels': out_channels}),
         'unet_dropout': (models.create_dropout_unet, {'num_measurements': in_channels, 'out_channels': out_channels}),
@@ -116,7 +113,7 @@ def load_checkpoint_for_inference(net: str, in_channels: int, experiment_type: s
         model = create_model(net=net, device=device, in_channels=in_channels, debug=False)
         model = load_model_state(model, str(ckpt_path), device)
     except RuntimeError:
-        print("Falling back to legacy unet_im2im model")
+        print("Falling back to legacy im2im_deep model")
         model = create_model(net=net, device=device, in_channels=in_channels, debug=False, legacy=True)
         model = load_model_state(model, str(ckpt_path), device)
 

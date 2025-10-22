@@ -21,7 +21,7 @@ source activate qutcc
 ```
 
 ## Quickstart: 
-We've included weights checkpoints from Im2Im-Deep and QUTCC for all five imaging tasks in this repo. You can download them [here](https://drive.google.com/file/d/1cX5_UDOYjb_cDIt1IBW7p0RHXuDbXO0m/view?usp=drive_link). Once downloaded, decompress the weights with the following command ```xz -d weights.tar.xz```and put them in the QUTCC_eval folder.
+We've included weights checkpoints from im2im_deep and QUTCC for all five imaging tasks in this repo. You can download them [here](https://drive.google.com/file/d/1cX5_UDOYjb_cDIt1IBW7p0RHXuDbXO0m/view?usp=drive_link). Once downloaded, decompress the weights with the following command ```xz -d weights.tar.xz```and put them in the QUTCC_eval folder.
 
 Then go to the provided Jupyter notebook ```quickstart.ipynb``` in the main QUTCC directory and run all code cells. This notebook provides visualization of image samples, as well as for conformalized PDFs. This notebook pulls from ```params.yml```, which contains precomputed lambda, upper quantile, and lower quantile values. **Be sure to select your experiment of interest** before running. 
 
@@ -70,7 +70,7 @@ To train models, use ``train.py`` with the relevant parameters (for learning rat
 
 ```
 python -u train.py \
-    --net unet_im2im \
+    --net im2im_deep \
     --transform "center_crop" \
     --epochs 50 \
     --experiment-type "Denoising" \

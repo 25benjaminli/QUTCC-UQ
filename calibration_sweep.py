@@ -22,6 +22,7 @@ def run_epoch_sweep(task: str, model_type: str, calib_subset: int, test_subset: 
     info = BEST_RUNS[task]
     experiment_type = info['experiment_type']
 
+
     run_folder_root = info.get(f"{model_type}_root")
     if not run_folder_root:
         raise ValueError(f"Root directory for '{model_type}' not found in '{experiment_type}'")
@@ -122,8 +123,8 @@ if __name__ == "__main__":
     #Choose which experiments you want to run: "mri", "qpi", "CT", "gaussian", "poisson", "real_noise_mice"
     experiments_to_run = ['mri']
 
-    #Choose which models you want to calibrate: 'unet_quantile', 'unet_im2im', 'im2im'
-    model_types_to_run = ['unet_quantile']
+    #Choose which models you want to calibrate: 'qutcc', 'im2im_deep', 'im2im'
+    model_types_to_run = ['qutcc']
 
     all_run_results = {}
     for experiment in experiments_to_run:
