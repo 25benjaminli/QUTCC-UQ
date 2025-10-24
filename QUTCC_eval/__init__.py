@@ -1,5 +1,5 @@
 import os
-from typing import Tuple
+from typing import Tuple, List, Optional
 
 import imageio.v3 as iio
 import matplotlib.pyplot as plt
@@ -8,12 +8,14 @@ import pandas as pd
 import seaborn as sns
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from models.im2im.add_uncertainty_im2im import ModelWithUncertainty
 from models.quantile_uqnet import UNetModel
 from matplotlib import gridspec
 from evaluation import return_calibrated_bounds
 from scipy.interpolate import UnivariateSpline
+from ipywidgets import interact, IntSlider
+from IPython.display import display
 
 def plot_size_stratified_risk(im2im_stratified, quantile_stratified):
     risk_metrics = ['Im2Im-UQ','QUTCC']
@@ -115,7 +117,7 @@ def plot_visualization(noisy, clean, im2im_model: nn.Module,
         (pred_im2im_image,        "im2im prediction",     False),
         (im2im_residual,          "im2im residual",       True),
         (pred_im2im_bounds,       "im2im uncertainty",    True),
-        (clean_img,               "Ground‑truth",         False),
+        (clean_img,               "Ground-truth",         False),
         (pred_quantile_image,     "Quantile prediction",  False),
         (quantile_residual,       "quantile residual",    True),
         (pred_quantile_bounds,    "quantile uncertainty", True),
@@ -153,6 +155,157 @@ def plot_visualization(noisy, clean, im2im_model: nn.Module,
             fig.colorbar(im, ax=ax, fraction=0.046)
     fig.tight_layout()
     return fig, axes
+
+def plot_vis_slider(dataloader: DataLoader, 
+                   im2im_model: nn.Module, quantile_model: nn.Module, 
+                   im2im_lam: float, lower_q: float, upper_q: float, device, 
+                   residual_vmax: float = 0.18, uncertainty_vmax: Optional[float] = None,
+                   zoom: Optional[int] = None, zoom_start: Optional[Tuple[int, int]] = None, 
+                   exp_type: Optional[str] = None, save: bool = False,
+                   max_images: Optional[int] = None):
+    """
+    Interactive visualization with slider to browse through images from a dataloader.
+    
+    Args:
+        dataloader: PyTorch DataLoader providing (noisy, clean) pairs
+        im2im_model: Im2Im model
+        quantile_model: Quantile model
+        im2im_lam: Lambda parameter for Im2Im
+        lower_q: Lower quantile for quantile model
+        upper_q: Upper quantile for quantile model
+        device: PyTorch device
+        residual_vmax: Max value for residual colormap
+        uncertainty_vmax: Max value for uncertainty colormap
+        zoom: Zoom factor (crop size)
+        zoom_start: Starting coordinates for zoom
+        exp_type: Experiment type for saving
+        save: Whether to save images
+        max_images: Maximum number of images to load from dataloader (None = all)
+    
+    Returns:
+        Interactive widget with slider
+    """
+    im2im_model.eval()
+    quantile_model.eval()
+    os.makedirs("plot_images", exist_ok=True)
+    
+    # Load all images from dataloader into memory
+    print("Loading images from dataloader...")
+    noisy_list = []
+    clean_list = []
+    
+    for batch_idx, (noisy, clean) in enumerate(dataloader):
+        # Extract individual images from batch
+        for i in range(noisy.shape[0]):
+            noisy_list.append(noisy[i:i+1])  # Keep batch dimension
+            clean_list.append(clean[i:i+1])
+            
+            if max_images is not None and len(noisy_list) >= max_images:
+                break
+        
+        if max_images is not None and len(noisy_list) >= max_images:
+            break
+    
+    num_images = len(noisy_list)
+    print(f"Loaded {num_images} images from dataloader")
+    
+    def plot_for_index(index):
+        """Generate plot for a specific image index."""
+        noisy = noisy_list[index]
+        clean = clean_list[index]
+        
+        with torch.no_grad():
+            noisy, clean = noisy.to(device), clean.to(device)
+            B, _, _, _ = noisy.shape
+
+            # --------- im2im model ---------
+            if isinstance(im2im_model.baseModel, UNetModel):
+                timevect = torch.full((B,), 0.5, device=device, dtype=torch.float32)
+                pred_im2im = im2im_model(noisy, timevect)
+            else: 
+                pred_im2im: torch.Tensor = im2im_model(noisy)
+            lower, upper = return_calibrated_bounds(pred_im2im, im2im_lam)
+            lower, upper = lower.cpu().numpy(), upper.cpu().numpy()
+            pred_im2im_image = pred_im2im[:, 1, :, :].cpu().numpy()
+            pred_im2im_bounds = upper - lower
+            im2im_residual = np.abs((pred_im2im_image - clean.squeeze(0).cpu().numpy()))
+            
+            # --------- quantile model ---------
+            lower_q_tensor = torch.tensor([lower_q], device=device, dtype=torch.float32)
+            timevect = torch.tensor([0.5], device=device, dtype=torch.float32)
+            upper_q_tensor = torch.tensor([upper_q], device=device, dtype=torch.float32)
+            pred_quantile_lower: torch.Tensor = quantile_model(noisy, lower_q_tensor).squeeze(0).cpu().numpy()
+            pred_quantile_image: torch.Tensor = quantile_model(noisy, timevect).squeeze(0).cpu().numpy()
+            pred_quantile_upper: torch.Tensor = quantile_model(noisy, upper_q_tensor).squeeze(0).cpu().numpy()
+            pred_quantile_bounds = pred_quantile_upper - pred_quantile_lower
+            quantile_residual = np.abs((pred_quantile_image - clean.squeeze(0).cpu().numpy()))
+
+            noisy_img = noisy.cpu().numpy()
+            clean_img = clean.squeeze(0).cpu().numpy()
+
+        imgs = [
+            (noisy_img[:, 0, :, :],   "Noisy input",        False),
+            (pred_im2im_image,        "im2im prediction",     False),
+            (im2im_residual,          "im2im residual",       True),
+            (pred_im2im_bounds,       "im2im uncertainty",    True),
+            (clean_img,               "Ground‑truth",         False),
+            (pred_quantile_image,     "Quantile prediction",  False),
+            (quantile_residual,       "quantile residual",    True),
+            (pred_quantile_bounds,    "quantile uncertainty", True),
+        ]
+        
+        # Create plot
+        cols = 4
+        rows = 2
+
+        fig, axes = plt.subplots(rows, cols, figsize=(3 * cols, 3 * rows))
+        axes = axes.ravel()
+
+        for ax, (img, title, is_uncertainty) in zip(axes, imgs):
+            img = img.transpose(1, 2, 0)
+            if zoom is not None:
+                img = img[zoom_start[0]:zoom_start[0] + zoom, zoom_start[1]:zoom_start[1] + zoom]
+            cmap = "rainbow" if is_uncertainty or "residual" in title else "gray"
+            if "uncertainty" in title: 
+                vmax = uncertainty_vmax
+            elif "residual" in title: 
+                vmax = residual_vmax
+            else: 
+                vmax = None
+                
+            if img.shape[-1] == 1:
+                cmap_func = plt.cm.get_cmap(cmap)
+                norm = plt.Normalize(vmax=vmax)
+                mapped_img = cmap_func(norm(np.squeeze(img)))
+            else: 
+                mapped_img = img
+            mapped_img = (mapped_img * 255).astype(np.uint8)
+            
+            if save:
+                iio.imwrite(f"plot_images/{index}_{title}_{exp_type}_zoom{zoom}.png", mapped_img)
+                
+            im = ax.imshow(img[:, :, 0], cmap=cmap, vmax=vmax)
+            ax.set_title(f"{title} (Image {index + 1}/{num_images})", fontsize=10)
+            ax.axis('off')
+            ax.set_aspect('equal')
+
+            if is_uncertainty: 
+                fig.colorbar(im, ax=ax, fraction=0.046)
+                
+        fig.tight_layout()
+        plt.show()
+    
+    # Create interactive slider
+    slider = IntSlider(
+        value=0,
+        min=0,
+        max=num_images - 1,
+        step=1,
+        description='Image:',
+        continuous_update=False  # Only update when slider is released
+    )
+    
+    return interact(plot_for_index, index=slider)
 
 def get_quantile_outputs(quantile_model, noisy_tensor, quantile_levels, device):
     """
