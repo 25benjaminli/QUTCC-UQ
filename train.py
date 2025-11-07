@@ -149,7 +149,8 @@ def get_transform(args):
         return None
     else:
         raise ValueError(f"Unknown transform: {args.transform}")
-    
+
+
 def get_dataloaders(args, transform):
     if args.experiment_type == "MRI": # TODO: Handle this in a more generic way
         input_path = args.data_root + "/training"

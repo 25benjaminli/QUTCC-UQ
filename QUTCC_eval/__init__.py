@@ -14,8 +14,11 @@ from models.quantile_uqnet import UNetModel
 from matplotlib import gridspec
 from evaluation import return_calibrated_bounds
 from scipy.interpolate import UnivariateSpline
-from ipywidgets import interact, IntSlider
-from IPython.display import display
+from ipywidgets import interact, IntSlider, Output
+from IPython.display import display, clear_output
+from torchmetrics import StructuralSimilarityIndexMeasure
+from torchmetrics.image import PeakSignalNoiseRatio
+import lpips
 
 def plot_size_stratified_risk(im2im_stratified, quantile_stratified):
     risk_metrics = ['Im2Im-UQ','QUTCC']
@@ -73,6 +76,23 @@ def plot_violin_plot(df_plot: pd.DataFrame):
     ax.set_ylim(0, 0.5)
     fig.tight_layout()
     return fig
+
+def skeletonize(img: np.ndarray, threshold: float = 0.1):
+    """
+    Skeletonize a 2D image by thresholding and thinning.
+    
+    Args:
+        img: 2D numpy array
+        threshold: Threshold value to binarize the image
+    Returns:
+        skeleton: 2D numpy array of the skeletonized image
+    """
+    from skimage.morphology import skeletonize as sk_skeletonize
+    # print the highest and lowest values of img
+    print("Image min:", img.min(), "max:", img.max())
+    binary_img = img > threshold
+    skeleton = sk_skeletonize(binary_img).astype(np.float32)
+    return skeleton
 
 def plot_visualization(noisy, clean, im2im_model: nn.Module, 
                        quantile_model: nn.Module, im2im_lam: float, 
@@ -156,11 +176,79 @@ def plot_visualization(noisy, clean, im2im_model: nn.Module,
     fig.tight_layout()
     return fig, axes
 
+def generate_proposals(img_map, window_sizes=[20,40,60], proposals_per_window=1):
+    # diff_img = np.abs(gt - pred)
+    step_size = 10
+    final_proposals = []
+    for window_size in window_sizes:
+        proposals = []
+        for i in range(0, img_map.shape[1] - window_size + 1, step_size):
+            for j in range(0, img_map.shape[2] - window_size + 1, step_size):
+                window = img_map[0, i:i+window_size, j:j+window_size]
+                mean_diff = np.mean(window)
+                proposals.append((mean_diff, (i, j, window_size)))
+        # sort proposals by mean_diff
+        proposals = sorted(proposals, key=lambda x: x[0], reverse=True)
+        final_proposals.extend(proposals[:proposals_per_window])
+
+    return final_proposals
+
+def compute_iou(box1, box2):
+    r1, c1, s1 = box1
+    r2, c2, s2 = box2
+    
+    # Calculate coordinates of intersection rectangle
+    x_left = max(c1, c2)
+    y_top = max(r1, r2)
+    x_right = min(c1 + s1, c2 + s2)
+    y_bottom = min(r1 + s1, r2 + s2)
+    
+    if x_right < x_left or y_bottom < y_top:
+        return 0.0
+    
+    # Calculate areas
+    intersection_area = (x_right - x_left) * (y_bottom - y_top)
+    box1_area = s1 * s1
+    box2_area = s2 * s2
+    union_area = box1_area + box2_area - intersection_area
+    
+    iou = intersection_area / union_area if union_area > 0 else 0.0
+    return iou
+
+def compute_average_iou(proposals1, proposals2):
+    if not proposals1 or not proposals2:
+        return 0.0
+    
+    # Extract boxes
+    boxes1 = [p[1] for p in proposals1]
+    boxes2 = [p[1] for p in proposals2]
+    
+    # Compute IoU between each pair and find best match for each box1
+    total_iou = 0.0
+    for box1 in boxes1:
+        max_iou = 0.0
+        for box2 in boxes2:
+            iou = compute_iou(box1, box2)
+            max_iou = max(max_iou, iou)
+        total_iou += max_iou
+    
+    avg_iou = total_iou / len(boxes1)
+    return avg_iou
+
+def compute_uncertainty_agreement_metrics(im2im_proposals, quantile_proposals):
+    # Compute average IoU in both directions
+    iou_1_to_2 = compute_average_iou(im2im_proposals, quantile_proposals)
+    iou_2_to_1 = compute_average_iou(quantile_proposals, im2im_proposals)
+    
+    # Symmetric IoU (average of both directions)
+    symmetric_iou = (iou_1_to_2 + iou_2_to_1) / 2.0
+    
+    return symmetric_iou
+
 def plot_vis_slider(dataloader: DataLoader, 
                    im2im_model: nn.Module, quantile_model: nn.Module, 
                    im2im_lam: float, lower_q: float, upper_q: float, device, 
                    residual_vmax: float = 0.18, uncertainty_vmax: Optional[float] = None,
-                   zoom: Optional[int] = None, zoom_start: Optional[Tuple[int, int]] = None, 
                    exp_type: Optional[str] = None, save: bool = False,
                    max_images: Optional[int] = None):
     """
@@ -176,8 +264,6 @@ def plot_vis_slider(dataloader: DataLoader,
         device: PyTorch device
         residual_vmax: Max value for residual colormap
         uncertainty_vmax: Max value for uncertainty colormap
-        zoom: Zoom factor (crop size)
-        zoom_start: Starting coordinates for zoom
         exp_type: Experiment type for saving
         save: Whether to save images
         max_images: Maximum number of images to load from dataloader (None = all)
@@ -208,6 +294,10 @@ def plot_vis_slider(dataloader: DataLoader,
     
     num_images = len(noisy_list)
     print(f"Loaded {num_images} images from dataloader")
+
+    ssim_metric = StructuralSimilarityIndexMeasure(data_range=1.0, reduction="none").to(device)
+    psnr_metric = PeakSignalNoiseRatio(data_range=1.0, reduction="none", dim=(1, 2, 3)).to(device)
+    lpips_metric = lpips.LPIPS(net="vgg").to(device)
     
     def plot_for_index(index):
         """Generate plot for a specific image index."""
@@ -227,31 +317,61 @@ def plot_vis_slider(dataloader: DataLoader,
             lower, upper = return_calibrated_bounds(pred_im2im, im2im_lam)
             lower, upper = lower.cpu().numpy(), upper.cpu().numpy()
             pred_im2im_image = pred_im2im[:, 1, :, :].cpu().numpy()
+
+
+            # compute metrics for im2im, flattening over all spatial dims and calculating metric per batch
+            orig_img = torch.from_numpy(pred_im2im_image).unsqueeze(0).cuda()
+            im2im_ssim = ssim_metric(orig_img, clean).view(orig_img.size(0), -1).mean(dim=1).item()
+            im2im_psnr = psnr_metric(orig_img, clean).view(orig_img.size(0), -1).mean(dim=1).item()
+            im2im_lpips = lpips_metric(orig_img, clean).view(orig_img.size(0), -1).mean(dim=1).item()
+
+
             pred_im2im_bounds = upper - lower
-            im2im_residual = np.abs((pred_im2im_image - clean.squeeze(0).cpu().numpy()))
+            im2im_residual = np.abs(pred_im2im_image - clean.squeeze(0).cpu().numpy())
             
+
             # --------- quantile model ---------
             lower_q_tensor = torch.tensor([lower_q], device=device, dtype=torch.float32)
             timevect = torch.tensor([0.5], device=device, dtype=torch.float32)
             upper_q_tensor = torch.tensor([upper_q], device=device, dtype=torch.float32)
-            pred_quantile_lower: torch.Tensor = quantile_model(noisy, lower_q_tensor).squeeze(0).cpu().numpy()
-            pred_quantile_image: torch.Tensor = quantile_model(noisy, timevect).squeeze(0).cpu().numpy()
-            pred_quantile_upper: torch.Tensor = quantile_model(noisy, upper_q_tensor).squeeze(0).cpu().numpy()
+            pred_quantile_lower = quantile_model(noisy, lower_q_tensor).squeeze(0).cpu().numpy()
+            
+            q_image_raw = quantile_model(noisy, timevect)
+            pred_quantile_image = q_image_raw.squeeze(0).cpu().numpy()
+            pred_quantile_upper = quantile_model(noisy, upper_q_tensor).squeeze(0).cpu().numpy()
             pred_quantile_bounds = pred_quantile_upper - pred_quantile_lower
-            quantile_residual = np.abs((pred_quantile_image - clean.squeeze(0).cpu().numpy()))
+            
+            quantile_residual = np.abs(pred_quantile_image - clean.squeeze(0).cpu().numpy())
+            
+            # compare how well the proposals caught by uncertainty compare to residual
+            uncertainty_props = generate_proposals(pred_quantile_bounds) # quantile_bounds represents the uncertainty map of the quantile model
+            # print("quantile proposals", uncertainty_props)
 
+            residual_props = generate_proposals(quantile_residual)
+            # print("residual proposals", residual_props)
+
+            quantile_ssim = ssim_metric(q_image_raw, clean).view(q_image_raw.size(0), -1).mean(dim=1).item()
+            quantile_psnr = psnr_metric(q_image_raw, clean).view(q_image_raw.size(0), -1).mean(dim=1).item()
+            quantile_lpips = lpips_metric(q_image_raw, clean).view(q_image_raw.size(0), -1).mean(dim=1).item()
+            
+            uncertainty_iou = compute_uncertainty_agreement_metrics(
+                residual_props, uncertainty_props
+            )
+            
             noisy_img = noisy.cpu().numpy()
             clean_img = clean.squeeze(0).cpu().numpy()
 
+            
+
         imgs = [
-            (noisy_img[:, 0, :, :],   "Noisy input",        False),
-            (pred_im2im_image,        "im2im prediction",     False),
-            (im2im_residual,          "im2im residual",       True),
-            (pred_im2im_bounds,       "im2im uncertainty",    True),
-            (clean_img,               "Ground‑truth",         False),
-            (pred_quantile_image,     "Quantile prediction",  False),
-            (quantile_residual,       "quantile residual",    True),
-            (pred_quantile_bounds,    "quantile uncertainty", True),
+            (noisy_img[:, 0, :, :],   "Noisy input",        False, None),
+            (pred_im2im_image,        f"im2im prediction ssim {im2im_ssim:.2f} \n psnr {im2im_psnr:.2f} lpips {im2im_lpips:.2f}", False, None),
+            (im2im_residual,          "im2im residual",       True, None),
+            (pred_im2im_bounds,       f"im2im uncertainty\nIoU: {uncertainty_iou:.3f}",    True, None),
+            (clean_img,               "Ground‑truth",         False, None),
+            (pred_quantile_image,     f"Quantile prediction ssim {quantile_ssim:.2f} \n psnr {quantile_psnr:.2f} lpips {quantile_lpips:.2f}", False, None),
+            (quantile_residual,       "quantile residual",    True, residual_props),
+            (pred_quantile_bounds,    f"quantile uncertainty\nIoU: {uncertainty_iou:.3f}", True, uncertainty_props),
         ]
         
         # Create plot
@@ -261,10 +381,8 @@ def plot_vis_slider(dataloader: DataLoader,
         fig, axes = plt.subplots(rows, cols, figsize=(3 * cols, 3 * rows))
         axes = axes.ravel()
 
-        for ax, (img, title, is_uncertainty) in zip(axes, imgs):
+        for ax, (img, title, is_uncertainty, proposals) in zip(axes, imgs):
             img = img.transpose(1, 2, 0)
-            if zoom is not None:
-                img = img[zoom_start[0]:zoom_start[0] + zoom, zoom_start[1]:zoom_start[1] + zoom]
             cmap = "rainbow" if is_uncertainty or "residual" in title else "gray"
             if "uncertainty" in title: 
                 vmax = uncertainty_vmax
@@ -285,7 +403,26 @@ def plot_vis_slider(dataloader: DataLoader,
                 iio.imwrite(f"plot_images/{index}_{title}_{exp_type}_zoom{zoom}.png", mapped_img)
                 
             im = ax.imshow(img[:, :, 0], cmap=cmap, vmax=vmax)
-            ax.set_title(f"{title} (Image {index + 1}/{num_images})", fontsize=10)
+            
+            # Plot bounding boxes if proposals are provided
+            if proposals is not None:
+                for _, (i_start, j_start, size) in proposals:
+                    # Red boxes for hallucination proposals (on predictions)
+                    # Cyan boxes for uncertainty proposals (on uncertainty maps)
+                    if "residual" in title:
+                        box_color = 'red'
+                        linewidth = 1.5
+                    elif is_uncertainty:
+                        box_color = 'black'
+                        linewidth = 2.0
+                    else:
+                        continue  # Don't plot boxes on other subplots
+                    
+                    rect = plt.Rectangle((j_start, i_start), size, size, 
+                                         linewidth=linewidth, edgecolor=box_color, facecolor='none')
+                    ax.add_patch(rect)
+            
+            ax.set_title(f"{title} (Image {index + 1}/{num_images})", fontsize=10, wrap=True)
             ax.axis('off')
             ax.set_aspect('equal')
 
